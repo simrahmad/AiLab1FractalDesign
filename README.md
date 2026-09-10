@@ -1,4 +1,4 @@
-\# Artistic Mandelbrot Fractal Renderer
+# Artistic Mandelbrot Fractal Renderer
 
 
 
