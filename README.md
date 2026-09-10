@@ -1,130 +1,198 @@
 # Artistic Mandelbrot Fractal Renderer
 
+A Python script that renders a high-resolution, deep-zoom view of the **Mandelbrot set** with a simulated **3D metallic lighting effect**, producing a striking piece of generative art rather than a plain escape-time plot.
 
+## What It Does
 
-A Python script that renders a high-resolution, deep-zoom view of the Mandelbrot set with a simulated 3D metallic lighting effect, producing a striking piece of generative art rather than a plain escape-time plot.
+The script zooms into a narrow region of the Mandelbrot set near one of its classic spiral boundaries and computes, for each pixel, how quickly the corresponding complex point escapes to infinity under iteration.
 
+The escape data is then treated as a **height field** and lit like a 3D surface, giving the final image a sense of depth and metallic sheen instead of flat banded coloring.
 
+## How It Works
 
-\## What It Does
+### 1. Coordinate Grid
 
+A grid of complex numbers `C` is built over a tight window:
 
+```text
+x: -0.7452 to -0.7432
+y:  0.1122 to  0.1134
+```
 
-The script zooms into a narrow region of the Mandelbrot set near one of its classic spiral boundaries and computes, for each pixel, how quickly the corresponding complex point escapes to infinity under iteration. That escape data is then treated as a height field and lit like a 3D surface, giving the final image a sense of depth and sheen instead of flat banded coloring.
+This region is chosen for its intricate spiral detail.
 
+### 2. Escape-Time Iteration
 
+For up to `max_iter` steps, each point is updated using the Mandelbrot recurrence:
 
-\## How It Works
+```text
+Z = Z² + C
+```
 
+Only points that have not yet escaped (`|Z| <= 2.0`) continue iterating. This keeps the computation efficient as more points escape over time.
 
+### 3. Smooth Coloring
 
-1\. \*\*Coordinate grid\*\*: A grid of complex numbers `C` is built over a tight window (`x: -0.7452 to -0.7432`, `y: 0.1122 to 0.1134`), a region chosen for its intricate spiral detail.
+Instead of storing a plain integer iteration count, which produces visible color banding, the script computes a continuous smoothed iteration value using the classic potential formula:
 
+```text
+i + 1 - log2(log(|Z|))
+```
 
+This value is stored in `smooth_iter` and provides a smoother surface for the final rendering.
 
-2\. \*\*Escape-time iteration\*\*: For up to `max\_iter` steps, each point is updated with the Mandelbrot recurrence `Z = Z^2 + C`. Only points that have not yet escaped (`|Z| <= 2.0`) continue iterating, which keeps the computation efficient as more of the grid escapes over time.
+### 4. Noise Reduction
 
+A light Gaussian blur with `sigma=0.5` is applied to the iteration field to reduce small pixel-level artifacts.
 
+### 5. Bump-Mapped Lighting
 
-3\. \*\*Smooth coloring\*\*: Instead of storing a plain integer iteration count (which produces visible banding), the script computes a continuous, smoothed iteration value using the classic `i + 1 - log2(log(|Z|))` potential formula. This is stored in `smooth\_iter`.
+The `smooth_iter` field is treated as a height map. Its gradients (`dx`, `dy`) are calculated to derive a surface normal at every pixel, as if the fractal were a physical relief surface.
 
+A fixed light direction is then used to calculate:
 
+* **Diffuse shading** — determines how directly each surface point faces the light.
+* **Specular highlight** — creates a sharp, metallic-looking glint using `diffuse^16`.
 
-4\. \*\*Noise reduction\*\*: A light Gaussian blur (`sigma=0.5`) smooths out pixel-level artifacts in the iteration field.
+### 6. Compositing
 
+The final brightness map combines the raw escape potential with the lighting terms using the following weights:
 
+| Component          | Weight |
+| ------------------ | -----: |
+| Escape potential   | `0.75` |
+| Diffuse lighting   | `25.0` |
+| Specular highlight | `50.0` |
 
-5\. \*\*Bump-mapped lighting\*\*: The script treats `smooth\_iter` as a height map and computes its gradient (`dx`, `dy`) to derive a surface normal at every pixel, as if the fractal were a physical relief surface. A fixed light direction is then used to calculate:
+This produces a rich, high-contrast metallic appearance.
 
-&#x20;  - \*\*Diffuse shading\*\*: how directly each surface point faces the light.
+### 7. Rendering
 
-&#x20;  - \*\*Specular highlight\*\*: a sharp, metallic-looking glint (`diffuse^16`) where the surface normal aligns closely with the light direction.
+The result is displayed with Matplotlib using the `magma` colormap, which complements the metallic lighting effect.
 
+The rendering uses:
 
+* **200 DPI**
+* No axes
+* No padding
+* Full-frame fractal composition
 
-6\. \*\*Compositing\*\*: The final image blends the raw escape potential with the diffuse and specular lighting terms (weighted `0.75`, `25.0`, and `50.0` respectively) to produce a rich, high-contrast brightness map.
+## Parameters
 
+| Parameter  | Description                              | Default |
+| ---------- | ---------------------------------------- | ------: |
+| `width`    | Output image width in pixels             |  `1600` |
+| `height`   | Output image height in pixels            |  `1000` |
+| `max_iter` | Maximum escape-time iterations per point |   `400` |
 
+## Requirements
 
-7\. \*\*Rendering\*\*: The result is displayed with Matplotlib using the `magma` colormap, which pairs well with the metallic lighting effect, at 200 DPI with all axes and padding removed for a clean image.
+The project requires:
 
+* Python 3.x
+* NumPy
+* Matplotlib
+* SciPy
 
-
-\## Parameters
-
-
-
-| Parameter | Description | Default |
-
-|---|---|---|
-
-| `width` | Output image width in pixels | 1600 |
-
-| `height` | Output image height in pixels | 1000 |
-
-| `max\_iter` | Maximum escape-time iterations per point | 400 |
-
-
-
-\## Requirements
-
-
-
-\- `numpy`
-
-\- `matplotlib`
-
-\- `scipy`
-
-
-
-Install with:
+Install the required dependencies with:
 
 ```bash
-
 pip install numpy matplotlib scipy
-
 ```
 
+## Usage
 
-
-\## Usage
-
-
-
-Run the script directly, or execute the notebook cell. A Matplotlib window will display the rendered fractal:
-
-
+Run the script directly:
 
 ```bash
-
-python fractal\_render.py
-
+python fractal_render.py
 ```
 
+A Matplotlib window will display the rendered fractal.
 
+### Save the Image
 
-To save the image instead of only displaying it, add before `plt.show()`:
-
-
+To save the rendered image instead of only displaying it, add the following before `plt.show()`:
 
 ```python
-
-plt.savefig("fractal.png", dpi=200, bbox\_inches="tight", pad\_inches=0)
-
+plt.savefig(
+    "fractal.png",
+    dpi=200,
+    bbox_inches="tight",
+    pad_inches=0
+)
 ```
 
+## Customization
 
+### Explore a Different Region
 
-\## Customization Tips
+Change the coordinate boundaries to explore different areas of the Mandelbrot set:
 
+```python
+x_min = -0.7452
+x_max = -0.7432
+y_min = 0.1122
+y_max = 0.1134
+```
 
+### Increase the Detail
 
-\- \*\*Different region\*\*: Change `x\_min, x\_max, y\_min, y\_max` to explore other areas of the Mandelbrot set.
+Increase `max_iter` to reveal more detail, especially when exploring deeper zoom levels:
 
-\- \*\*More detail\*\*: Increase `max\_iter` for deeper zooms (at the cost of longer render times).
+```python
+max_iter = 800
+```
 
-\- \*\*Lighting angle\*\*: Adjust `lx, ly, lz` to change the simulated light source direction.
+Higher iteration counts will increase rendering time.
 
-\- \*\*Color palette\*\*: Swap `cmap="magma"` for other Matplotlib colormaps such as `"inferno"`, `"plasma"`, or `"cividis"`.
+### Change the Lighting Angle
 
+Adjust the light direction parameters:
+
+```python
+lx
+ly
+lz
+```
+
+Changing these values alters the direction of the simulated 3D light source.
+
+### Change the Color Palette
+
+The default colormap is:
+
+```python
+cmap="magma"
+```
+
+You can experiment with other Matplotlib colormaps:
+
+```python
+cmap="inferno"
+cmap="plasma"
+cmap="cividis"
+```
+
+## Example Result
+
+The renderer produces a deep-zoom Mandelbrot visualization with:
+
+* Intricate spiral structures
+* Smooth escape-time shading
+* Simulated 3D depth
+* Metallic highlights
+* High-contrast generative-art aesthetics
+
+## Project Structure
+
+```text
+.
+├── fractal_render.py
+├── README.md
+└── fractal.png          # Optional generated output
+```
+
+## License
+
+This project is provided for educational and generative-art purposes. You are free to modify and experiment with the code.
